@@ -7,8 +7,23 @@
 <style>
   /* --- CSS RESET & BASE --- */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
   
+  body, html { 
+    margin: 0; 
+    padding: 0; 
+    width: 100%; 
+    height: 100%; 
+    overflow: hidden; 
+    background-color: #000; 
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    
+    /* --- FIX: PREVENT SELECTION --- */
+    -webkit-user-select: none; /* Safari */
+    -moz-user-select: none;    /* Firefox */
+    -ms-user-select: none;     /* IE10+/Edge */
+    user-select: none;         /* Standard */
+  }
+   
   /* --- CONFIGURABLE VARIABLES (Updated by JS) --- */
   :root {
     --bg-color: #111111;
@@ -24,7 +39,11 @@
     top: 0; left: 0; width: 100%; height: 100%;
     overflow: hidden;
     cursor: grab;
-    touch-action: none; /* Prevent browser scrolling */
+    touch-action: none; /* Prevent browser scrolling on touch */
+    
+    /* Ensure container itself is not selectable */
+    user-select: none;
+    -webkit-user-select: none;
   }
   #canvas-container:active { cursor: grabbing; }
 
@@ -41,6 +60,10 @@
     /* Hardware acceleration hint */
     transform: translate3d(0,0,0); 
     transition: box-shadow 0.3s ease;
+    
+    /* Ensure tiles are not selectable */
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .tile-inner {
@@ -56,6 +79,10 @@
     display: block;
     pointer-events: none;
     transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    
+    /* Prevent image dragging (ghost image) */
+    -webkit-user-drag: none;
+    user-drag: none;
   }
 
   /* Hover Lift */
@@ -117,6 +144,9 @@
     max-width: 100vw;
     max-height: 85vh;
     object-fit: contain;
+    /* Enable selection inside viewer if user wants to save image */
+    pointer-events: auto; 
+    user-select: auto;
   }
 
   /* Viewer Controls */
@@ -137,7 +167,7 @@
   }
   .viewer-btn:hover { background: rgba(255,255,255,0.25); }
   .viewer-btn svg { width: 24px; height: 24px; stroke: white; stroke-width: 2; fill: none; }
-  
+   
   #btn-close { top: 20px; right: 20px; }
   #btn-prev { top: 50%; left: 20px; transform: translateY(-50%); }
   #btn-next { top: 50%; right: 20px; transform: translateY(-50%); }
@@ -153,6 +183,8 @@
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
     color: #333; font-size: 12px; letter-spacing: 1px;
     opacity: 0.5;
+    pointer-events: none;
+    user-select: none;
   }
 
   /* Mobile Adjustments */
@@ -217,7 +249,8 @@ const CONFIG = {
   
   // Interaction
   clickThreshold: 5,     // Pixels moved to distinguish click from drag
-  pressScale: 0.95       // Scale down on mousedown
+  pressScale: 0.95,      // Scale down on mousedown
+  wheelSensitivity: 0.2  // Multiplier for scroll wheel
 };
 
 /* * ------------------------------------------------------------------
@@ -226,6 +259,7 @@ const CONFIG = {
  * ------------------------------------------------------------------
  */
 const MEDIA = [
+  // Using placeholders for the preview. Replace with your files: { type: "image", src: "1.jpg" }
   { type: "image", src: "1.jpg" },
   { type: "image", src: "2.jpg" },
   { type: "image", src: "3.jpg" },
@@ -238,10 +272,7 @@ const MEDIA = [
   { type: "image", src: "10.jpg" },
   { type: "image", src: "11.jpg" },
   { type: "image", src: "12.jpg" },
-  { type: "image", src: "13.jpg" },
-  
-  // Example of VIDEO mixing:
-  // { type: "video", src: "path/to/video.mp4", thumb: "poster.jpg" }
+  { type: "image", src: "13.jpg" }
 ];
 
 
@@ -292,6 +323,9 @@ function init() {
   window.addEventListener('pointermove', onPointerMove);
   window.addEventListener('pointerup', onPointerUp);
   window.addEventListener('pointercancel', onPointerUp);
+
+  // Scroll Wheel Support
+  window.addEventListener('wheel', onWheel, { passive: false });
   
   // Viewer Events
   document.getElementById('btn-close').addEventListener('click', closeViewer);
@@ -312,16 +346,12 @@ function resize() {
   width = window.innerWidth;
   height = window.innerHeight;
   // Calculate tile width based on desired aspect ratio and row height
-  // Or fixed columns? Let's use rowHeight as the anchor for consistency
   tileWidth = CONFIG.rowHeight * CONFIG.tileAspect;
 }
 
 function onResize() {
   resize();
-  // Re-create grid if dimensions change drastically? 
-  // For simplicity in this lightweight version, we just update bounds.
-  // Ideally we'd rebuild the grid pool if screen gets much larger.
-  // A simple reload is safer for big resizes to ensure coverage.
+  // Simple reload for drastic resizes to ensure coverage
   if (Math.abs(width - window.innerWidth) > 100) {
     location.reload(); 
   }
@@ -412,20 +442,12 @@ function loop() {
     y += paraY;
 
     // WRAPPING LOGIC (The "Infinite" part)
-    // If tile moves too far left/up, transport to right/down
-    // If tile moves too far right/down, transport to left/up
-    
-    // Wrap X
-    // We want x to be roughly within [-width, width]
-    // Use modulo to wrap relative to camera
-    // Offset the check by width/2 to center the wrapping
     
     // The visual loop length
     const loopW = totalGridW;
     const loopH = totalGridH;
     
     // Math to wrap `x` into range [-buffer, loopW - buffer]
-    // A robust way:
     let wrappedX = ((x % loopW) + loopW) % loopW;
     // Shift so 0 is not the hard edge, center it
     if (wrappedX > width + tileWidth) wrappedX -= loopW;
@@ -471,18 +493,16 @@ function updateTileContent(tile, item) {
     mediaEl.muted = true;
     mediaEl.loop = true;
     mediaEl.playsInline = true;
-    // Auto play videos on hover is handled via JS mouseenter if desired, 
-    // or just autoplay:
-    // mediaEl.autoplay = true; 
-    // Ideally only play when visible/hovered for performance
     mediaEl.onmouseover = () => mediaEl.play();
     mediaEl.onmouseout = () => mediaEl.pause();
+    mediaEl.draggable = false;
   } else {
     mediaEl = document.createElement('img');
     mediaEl.src = item.src;
-    // Removed alt title usage to ensure no names appear
     mediaEl.alt = "Gallery image"; 
+    // Explicitly disable drag on the element itself
     mediaEl.draggable = false;
+    mediaEl.ondragstart = function() { return false; };
   }
   
   tile.inner.appendChild(mediaEl);
@@ -504,12 +524,7 @@ function updateTileContent(tile, item) {
       }
   };
   tile.el.onpointerup = function() {
-      // Restore scale handled by loop re-applying transform, 
-      // but let's reset transition manually for smoothness
-      setTimeout(() => {
-         // The loop overwrites transform every frame, so we rely on the loop 
-         // to remove the scale on next frame naturally.
-      }, 150);
+      // Transition reset handled by loop
   };
 }
 
@@ -564,6 +579,26 @@ function onPointerUp(e) {
       openViewer(parseInt(tileEl.dataset.index));
     }
   }
+}
+
+/**
+ * Handle Scroll Wheel
+ */
+function onWheel(e) {
+  // Prevent default browser scrolling to avoid conflicts
+  e.preventDefault();
+
+  // Invert delta so "scrolling down" moves the view "down" (content moves up)
+  // or match "natural" scrolling based on preference. 
+  // Here we simply subtract delta to move the camera opposite to wheel
+  
+  // Apply to velocity instead of direct offset for smooth momentum
+  velocity.x -= e.deltaX * CONFIG.wheelSensitivity;
+  velocity.y -= e.deltaY * CONFIG.wheelSensitivity;
+  
+  // Clamp in case of aggressive scrolling
+  velocity.x = Math.max(Math.min(velocity.x, CONFIG.maxVelocity), -CONFIG.maxVelocity);
+  velocity.y = Math.max(Math.min(velocity.y, CONFIG.maxVelocity), -CONFIG.maxVelocity);
 }
 
 /**

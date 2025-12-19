@@ -7,16 +7,16 @@
 <style>
   /* --- CSS RESET & BASE --- */
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  
-  body, html { 
-    margin: 0; 
-    padding: 0; 
-    width: 100%; 
-    height: 100%; 
-    overflow: hidden; 
-    background-color: #000; 
+ 
+  body, html {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background-color: #000;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-    
+   
     /* --- FIX: PREVENT SELECTION --- */
     -webkit-user-select: none; /* Safari */
     -moz-user-select: none;    /* Firefox */
@@ -40,7 +40,7 @@
     overflow: hidden;
     cursor: grab;
     touch-action: none; /* Prevent browser scrolling on touch */
-    
+   
     /* Ensure container itself is not selectable */
     user-select: none;
     -webkit-user-select: none;
@@ -58,9 +58,9 @@
     transform-origin: center center;
     will-change: transform;
     /* Hardware acceleration hint */
-    transform: translate3d(0,0,0); 
+    transform: translate3d(0,0,0);
     transition: box-shadow 0.3s ease;
-    
+   
     /* Ensure tiles are not selectable */
     user-select: none;
     -webkit-user-select: none;
@@ -79,7 +79,7 @@
     display: block;
     pointer-events: none;
     transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-    
+   
     /* Prevent image dragging (ghost image) */
     -webkit-user-drag: none;
     user-drag: none;
@@ -145,7 +145,7 @@
     max-height: 85vh;
     object-fit: contain;
     /* Enable selection inside viewer if user wants to save image */
-    pointer-events: auto; 
+    pointer-events: auto;
     user-select: auto;
   }
 
@@ -171,9 +171,6 @@
   #btn-close { top: 20px; right: 20px; }
   #btn-prev { top: 50%; left: 20px; transform: translateY(-50%); }
   #btn-next { top: 50%; right: 20px; transform: translateY(-50%); }
-
-  /* Removed viewer-caption styles as it is no longer used */
-  #viewer-caption { display: none; }
 
   /* Hide scrollbars but keep functionality */
   ::-webkit-scrollbar { width: 0px; background: transparent; }
@@ -214,7 +211,7 @@
     <button id="btn-next" class="viewer-btn" aria-label="Next">
       <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
     </button>
-    
+   
     <div id="viewer-content">
       <!-- Media injected here -->
     </div>
@@ -233,20 +230,19 @@ const CONFIG = {
   rowHeight: 300,        // Height of each row in px
   gap: 20,               // Gap between tiles
   tileAspect: 1.0,       // Width/Height ratio (1.0 = Square)
-  
+ 
   // Physics & Motion
   friction: 0.94,        // 0.9 = stops fast, 0.99 = slides forever
   speed: 1.5,            // Global speed multiplier
   maxVelocity: 40,       // Clamp max speed to prevent glitching
-  parallaxStrength: 0.15,// Vertical shift variance per column
   idleFloat: true,       // Gentle floating motion when not interacting
-  
+ 
   // Visuals
   bgColor: "#111111",
   tileRadius: "12px",
   shadowOpacity: 0.4,
   rippleOn: true,
-  
+ 
   // Interaction
   clickThreshold: 5,     // Pixels moved to distinguish click from drag
   pressScale: 0.95,      // Scale down on mousedown
@@ -254,7 +250,7 @@ const CONFIG = {
 };
 
 /* * ------------------------------------------------------------------
- * REPLACE MEDIA HERE 
+ * REPLACE MEDIA HERE
  * You can add objects with { type: 'image'|'video', src: 'url' }
  * ------------------------------------------------------------------
  */
@@ -314,10 +310,10 @@ function init() {
   resize();
   createGrid();
   loop();
-  
+ 
   // Events
   window.addEventListener('resize', onResize);
-  
+ 
   // Pointer Events (Mouse + Touch)
   container.addEventListener('pointerdown', onPointerDown);
   window.addEventListener('pointermove', onPointerMove);
@@ -326,7 +322,7 @@ function init() {
 
   // Scroll Wheel Support
   window.addEventListener('wheel', onWheel, { passive: false });
-  
+ 
   // Viewer Events
   document.getElementById('btn-close').addEventListener('click', closeViewer);
   document.getElementById('btn-next').addEventListener('click', () => navViewer(1));
@@ -353,7 +349,7 @@ function onResize() {
   resize();
   // Simple reload for drastic resizes to ensure coverage
   if (Math.abs(width - window.innerWidth) > 100) {
-    location.reload(); 
+    location.reload();
   }
 }
 
@@ -363,29 +359,37 @@ function onResize() {
 function createGrid() {
   container.innerHTML = '';
   tiles = [];
-  
+ 
   // How many cols/rows to cover screen + buffer
   // We add 2 extra on each side for smooth wrapping
-  const colsNeeded = Math.ceil(width / (tileWidth + CONFIG.gap)) + 2;
-  const rowsNeeded = Math.ceil(height / (CONFIG.rowHeight + CONFIG.gap)) + 2;
-  
+  let colsNeeded = Math.ceil(width / (tileWidth + CONFIG.gap)) + 2;
+ 
+  // FORCE EVEN COLS:
+  // If cols is odd, the alternating direction pattern breaks at the wrap point
+  if (colsNeeded % 2 !== 0) {
+    colsNeeded++;
+  }
+
+  // Row Logic: Standard coverage (Removed "Force Even Rows" as we aren't alternating rows anymore)
+  let rowsNeeded = Math.ceil(height / (CONFIG.rowHeight + CONFIG.gap)) + 2;
+ 
   gridCols = colsNeeded;
   gridRows = rowsNeeded;
-  
+ 
   const totalTiles = gridCols * gridRows;
-  
+ 
   for (let i = 0; i < totalTiles; i++) {
     const el = document.createElement('div');
     el.className = 'tile';
     el.style.width = `${tileWidth}px`;
     el.style.height = `${CONFIG.rowHeight}px`;
-    
+   
     const inner = document.createElement('div');
     inner.className = 'tile-inner';
     el.appendChild(inner);
-    
+   
     container.appendChild(el);
-    
+   
     // Store metadata
     tiles.push({
       el,
@@ -404,13 +408,13 @@ function createGrid() {
  */
 function loop() {
   rafId = requestAnimationFrame(loop);
-  
+ 
   // 1. Physics
   if (!isDragging) {
     // Apply Friction
     velocity.x *= CONFIG.friction;
     velocity.y *= CONFIG.friction;
-    
+   
     // Float effect (if slow enough)
     if (CONFIG.idleFloat && Math.abs(velocity.x) < 0.1 && Math.abs(velocity.y) < 0.1) {
       time += 0.01;
@@ -418,41 +422,55 @@ function loop() {
       velocity.y += Math.cos(time * 0.7) * 0.02;
     }
   }
-  
+ 
   // Update Offset
   offset.x += velocity.x * CONFIG.speed;
   offset.y += velocity.y * CONFIG.speed;
-  
+ 
   // 2. Rendering / Virtual Grid Logic
   const totalGridW = gridCols * (tileWidth + CONFIG.gap);
   const totalGridH = gridRows * (CONFIG.rowHeight + CONFIG.gap);
-  
+ 
   tiles.forEach(tile => {
     // Calculate "base" position in the grid
     let baseX = tile.col * (tileWidth + CONFIG.gap);
     let baseY = tile.row * (CONFIG.rowHeight + CONFIG.gap);
-    
-    // Apply global offset
-    let x = baseX + offset.x;
-    let y = baseY + offset.y;
-    
-    // Parallax: Shift Y based on column to create "uneven" drift
-    // We use tile.col to offset the Y
-    let paraY = (tile.col % 2 === 0 ? 1 : -1) * (offset.x * CONFIG.parallaxStrength);
-    y += paraY;
+   
+    // --- ALTERNATING DRIFT LOGIC ---
+   
+    // 1. Determine Column Direction (Even=1, Odd=-1)
+    const colDirection = (tile.col % 2 === 0) ? 1 : -1;
 
-    // WRAPPING LOGIC (The "Infinite" part)
+    // 2. Calculate Coordinates
     
+    // X-Axis: Standard Panning
+    // All tiles move together horizontally (reverted row-splitting logic)
+    let x = baseX + offset.x;
+
+    // Y-Axis: Split Panning
+    // Driven by BOTH Vertical Drag (offset.y) and Horizontal Drag (offset.x)
+    //
+    // Logic:
+    // - Drag Down (y+)  -> Even Cols Move Down (y+)  => +offset.y (Standard Direct)
+    // - Drag Right (x+) -> Even Cols Move Up (y-)    => -offset.x (Cross-Axis)
+    //
+    // This creates the effect where any drag direction causes the columns to slide.
+    let y = baseY + (offset.y - offset.x) * colDirection;
+   
+    // WRAPPING LOGIC (The "Infinite" part)
+   
     // The visual loop length
     const loopW = totalGridW;
     const loopH = totalGridH;
-    
+   
     // Math to wrap `x` into range [-buffer, loopW - buffer]
+    // The ((n % m) + m) % m formula handles negative numbers correctly
     let wrappedX = ((x % loopW) + loopW) % loopW;
+   
     // Shift so 0 is not the hard edge, center it
     if (wrappedX > width + tileWidth) wrappedX -= loopW;
     if (wrappedX < -tileWidth * 2) wrappedX += loopW;
-    
+   
     let wrappedY = ((y % loopH) + loopH) % loopH;
     if (wrappedY > height + CONFIG.rowHeight) wrappedY -= loopH;
     if (wrappedY < -CONFIG.rowHeight * 2) wrappedY += loopH;
@@ -460,24 +478,24 @@ function loop() {
     // 3. Content Mapping (Intelligent Shuffle)
     // We need to know the "Virtual" column/row index to assign consistent content
     // Determine how many times we've wrapped
-    const wrapCol = Math.round((x - wrappedX) / loopW); 
+    const wrapCol = Math.round((x - wrappedX) / loopW);
     const wrapRow = Math.round((y - wrappedY) / loopH);
-    
+   
     // Logical coordinates in the infinite space
     const logicalCol = tile.col - (wrapCol * gridCols);
     const logicalRow = tile.row - (wrapRow * gridRows);
-    
+   
     // Generate a pseudo-random index based on position so it looks shuffled but consistent
     // Using primes avoids obvious repeating diagonal patterns
     const patternIndex = Math.abs((logicalCol * 7) + (logicalRow * 11));
     const mediaIndex = patternIndex % MEDIA.length;
-    
+   
     // DOM Update: only if content changed (performance)
     if (tile.currentMediaIndex !== mediaIndex) {
       updateTileContent(tile, MEDIA[mediaIndex]);
       tile.currentMediaIndex = mediaIndex;
     }
-    
+   
     // Apply Transform
     tile.el.style.transform = `translate3d(${wrappedX.toFixed(1)}px, ${wrappedY.toFixed(1)}px, 0)`;
   });
@@ -485,7 +503,7 @@ function loop() {
 
 function updateTileContent(tile, item) {
   tile.inner.innerHTML = ''; // Clear old
-  
+ 
   let mediaEl;
   if (item.type === 'video') {
     mediaEl = document.createElement('video');
@@ -499,20 +517,20 @@ function updateTileContent(tile, item) {
   } else {
     mediaEl = document.createElement('img');
     mediaEl.src = item.src;
-    mediaEl.alt = "Gallery image"; 
+    mediaEl.alt = "Gallery image";
     // Explicitly disable drag on the element itself
     mediaEl.draggable = false;
     mediaEl.ondragstart = function() { return false; };
   }
-  
+ 
   tile.inner.appendChild(mediaEl);
-  
+ 
   // Attach data for click handler
   tile.el.dataset.index = MEDIA.indexOf(item);
   tile.el.onpointerdown = function(e) {
       // Press animation
       this.style.transform = this.style.transform.replace(/scale\([0-9.]+\)/, '') + ` scale(${CONFIG.pressScale})`;
-      
+     
       if (CONFIG.rippleOn) {
         const rect = this.getBoundingClientRect();
         const ripple = document.createElement('div');
@@ -545,32 +563,32 @@ function onPointerDown(e) {
 
 function onPointerMove(e) {
   if (!isDragging) return;
-  
+ 
   const dx = e.clientX - lastMouse.x;
   const dy = e.clientY - lastMouse.y;
-  
+ 
   // Direct movement
   offset.x += dx * CONFIG.speed;
   offset.y += dy * CONFIG.speed;
-  
+ 
   // Calculate velocity for inertia release
   velocity.x = dx;
   velocity.y = dy;
-  
+ 
   // Clamp velocity
   velocity.x = Math.max(Math.min(velocity.x, CONFIG.maxVelocity), -CONFIG.maxVelocity);
   velocity.y = Math.max(Math.min(velocity.y, CONFIG.maxVelocity), -CONFIG.maxVelocity);
-  
+ 
   lastMouse = { x: e.clientX, y: e.clientY };
 }
 
 function onPointerUp(e) {
   if (!isDragging) return;
   isDragging = false;
-  
+ 
   // Detect Click vs Drag
   const dist = Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y);
-  
+ 
   if (dist < CONFIG.clickThreshold) {
     // It was a click!
     // Find target tile
@@ -589,13 +607,13 @@ function onWheel(e) {
   e.preventDefault();
 
   // Invert delta so "scrolling down" moves the view "down" (content moves up)
-  // or match "natural" scrolling based on preference. 
+  // or match "natural" scrolling based on preference.
   // Here we simply subtract delta to move the camera opposite to wheel
-  
+ 
   // Apply to velocity instead of direct offset for smooth momentum
   velocity.x -= e.deltaX * CONFIG.wheelSensitivity;
   velocity.y -= e.deltaY * CONFIG.wheelSensitivity;
-  
+ 
   // Clamp in case of aggressive scrolling
   velocity.x = Math.max(Math.min(velocity.x, CONFIG.maxVelocity), -CONFIG.maxVelocity);
   velocity.y = Math.max(Math.min(velocity.y, CONFIG.maxVelocity), -CONFIG.maxVelocity);
@@ -632,7 +650,7 @@ function updateViewer() {
   const item = MEDIA[currentViewerIndex];
   viewerContent.innerHTML = '';
   // Removed caption setting
-  
+ 
   if (item.type === 'video') {
     const v = document.createElement('video');
     v.src = item.src;

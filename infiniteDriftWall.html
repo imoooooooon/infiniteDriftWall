@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Infinite Drift Wall</title>
+<style>
+  /* --- CSS RESET & BASE --- */
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+  
+  /* --- CONFIGURABLE VARIABLES (Updated by JS) --- */
+  :root {
+    --bg-color: #111111;
+    --tile-radius: 12px;
+    --shadow-color: rgba(0,0,0,0.3);
+  }
+
+  body { background-color: var(--bg-color); }
+
+  /* --- UI LAYERS --- */
+  #canvas-container {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    overflow: hidden;
+    cursor: grab;
+    touch-action: none; /* Prevent browser scrolling */
+  }
+  #canvas-container:active { cursor: grabbing; }
+
+  /* --- TILE STYLES --- */
+  .tile {
+    position: absolute;
+    top: 0; left: 0;
+    background-color: #222;
+    border-radius: var(--tile-radius);
+    overflow: hidden;
+    box-shadow: 0 10px 20px var(--shadow-color);
+    transform-origin: center center;
+    will-change: transform;
+    /* Hardware acceleration hint */
+    transform: translate3d(0,0,0); 
+    transition: box-shadow 0.3s ease;
+  }
+
+  .tile-inner {
+    width: 100%; height: 100%;
+    position: relative;
+    overflow: hidden;
+    pointer-events: none; /* Let clicks pass to parent */
+  }
+
+  .tile img, .tile video {
+    width: 100%; height: 100%;
+    object-fit: cover;
+    display: block;
+    pointer-events: none;
+    transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+
+  /* Hover Lift */
+  @media (hover: hover) {
+    .tile:hover {
+      box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+      z-index: 10;
+    }
+    .tile:hover img, .tile:hover video {
+      transform: scale(1.05);
+    }
+  }
+
+  /* Click Ripple */
+  .ripple {
+    position: absolute;
+    border-radius: 50%;
+    transform: scale(0);
+    animation: ripple-anim 0.6s linear;
+    background-color: rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+  }
+  @keyframes ripple-anim {
+    to { transform: scale(4); opacity: 0; }
+  }
+
+  /* --- LIGHTBOX VIEWER --- */
+  #viewer {
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.92);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+  }
+  #viewer.active {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #viewer-content {
+    max-width: 90%;
+    max-height: 85%;
+    position: relative;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    border-radius: 4px;
+    overflow: hidden;
+    transform: scale(0.95);
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  #viewer.active #viewer-content { transform: scale(1); }
+
+  #viewer-media {
+    display: block;
+    max-width: 100vw;
+    max-height: 85vh;
+    object-fit: contain;
+  }
+
+  /* Viewer Controls */
+  .viewer-btn {
+    position: absolute;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: white;
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: background 0.2s;
+    backdrop-filter: blur(5px);
+    z-index: 1001;
+  }
+  .viewer-btn:hover { background: rgba(255,255,255,0.25); }
+  .viewer-btn svg { width: 24px; height: 24px; stroke: white; stroke-width: 2; fill: none; }
+  
+  #btn-close { top: 20px; right: 20px; }
+  #btn-prev { top: 50%; left: 20px; transform: translateY(-50%); }
+  #btn-next { top: 50%; right: 20px; transform: translateY(-50%); }
+
+  /* Removed viewer-caption styles as it is no longer used */
+  #viewer-caption { display: none; }
+
+  /* Hide scrollbars but keep functionality */
+  ::-webkit-scrollbar { width: 0px; background: transparent; }
+
+  /* Loading State */
+  .loading-indicator {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    color: #333; font-size: 12px; letter-spacing: 1px;
+    opacity: 0.5;
+  }
+
+  /* Mobile Adjustments */
+  @media (max-width: 768px) {
+    .viewer-btn { width: 40px; height: 40px; }
+    #btn-prev, #btn-next { display: none; /* Swipe only on mobile usually, but kept simple */ }
+    #viewer-content { max-width: 95%; }
+  }
+</style>
+</head>
+<body>
+
+  <div class="loading-indicator">INITIALIZING WALL...</div>
+
+  <div id="canvas-container">
+    <!-- Tiles injected here via JS -->
+  </div>
+
+  <!-- Viewer -->
+  <div id="viewer" role="dialog" aria-modal="true" aria-label="Media Viewer">
+    <button id="btn-close" class="viewer-btn" aria-label="Close">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+    <button id="btn-prev" class="viewer-btn" aria-label="Previous">
+      <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"></polyline></svg>
+    </button>
+    <button id="btn-next" class="viewer-btn" aria-label="Next">
+      <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"></polyline></svg>
+    </button>
+    
+    <div id="viewer-content">
+      <!-- Media injected here -->
+    </div>
+  </div>
+
+<script>
+/**
+ * ============================================================================
+ * CONFIGURATION & CONTENT
+ * ============================================================================
+ */
+
+const CONFIG = {
+  // Layout
+  columns: 5,            // Number of columns visible (approx)
+  rowHeight: 300,        // Height of each row in px
+  gap: 20,               // Gap between tiles
+  tileAspect: 1.0,       // Width/Height ratio (1.0 = Square)
+  
+  // Physics & Motion
+  friction: 0.94,        // 0.9 = stops fast, 0.99 = slides forever
+  speed: 1.5,            // Global speed multiplier
+  maxVelocity: 40,       // Clamp max speed to prevent glitching
+  parallaxStrength: 0.15,// Vertical shift variance per column
+  idleFloat: true,       // Gentle floating motion when not interacting
+  
+  // Visuals
+  bgColor: "#111111",
+  tileRadius: "12px",
+  shadowOpacity: 0.4,
+  rippleOn: true,
+  
+  // Interaction
+  clickThreshold: 5,     // Pixels moved to distinguish click from drag
+  pressScale: 0.95       // Scale down on mousedown
+};
+
+/* * ------------------------------------------------------------------
+ * REPLACE MEDIA HERE 
+ * You can add objects with { type: 'image'|'video', src: 'url' }
+ * ------------------------------------------------------------------
+ */
+const MEDIA = [
+  { type: "image", src: "1.jpg" },
+  { type: "image", src: "2.jpg" },
+  { type: "image", src: "3.jpg" },
+  { type: "image", src: "4.jpg" },
+  { type: "image", src: "5.jpg" },
+  { type: "image", src: "6.jpg" },
+  { type: "image", src: "7.jpg" },
+  { type: "image", src: "8.jpg" },
+  { type: "image", src: "9.jpg" },
+  { type: "image", src: "10.jpg" },
+  { type: "image", src: "11.jpg" },
+  { type: "image", src: "12.jpg" },
+  { type: "image", src: "13.jpg" },
+  
+  // Example of VIDEO mixing:
+  // { type: "video", src: "path/to/video.mp4", thumb: "poster.jpg" }
+];
+
+
+/**
+ * ============================================================================
+ * ENGINE CORE
+ * ============================================================================
+ */
+
+// Apply CSS Config
+document.documentElement.style.setProperty('--bg-color', CONFIG.bgColor);
+document.documentElement.style.setProperty('--tile-radius', CONFIG.tileRadius);
+
+const container = document.getElementById('canvas-container');
+const viewer = document.getElementById('viewer');
+const viewerContent = document.getElementById('viewer-content');
+
+// State
+let width = window.innerWidth;
+let height = window.innerHeight;
+let tileWidth = 0; // Calculated based on aspect ratio
+let tiles = []; // DOM elements pool
+let gridCols = 0;
+let gridRows = 0;
+
+// Physics State
+let offset = { x: 0, y: 0 };
+let velocity = { x: -0.5, y: -0.5 }; // Initial slow drift
+let targetVelocity = { x: 0, y: 0 };
+let isDragging = false;
+let isHovering = false;
+let lastMouse = { x: 0, y: 0 };
+let dragStart = { x: 0, y: 0 };
+let rafId;
+let time = 0;
+
+// Setup
+function init() {
+  resize();
+  createGrid();
+  loop();
+  
+  // Events
+  window.addEventListener('resize', onResize);
+  
+  // Pointer Events (Mouse + Touch)
+  container.addEventListener('pointerdown', onPointerDown);
+  window.addEventListener('pointermove', onPointerMove);
+  window.addEventListener('pointerup', onPointerUp);
+  window.addEventListener('pointercancel', onPointerUp);
+  
+  // Viewer Events
+  document.getElementById('btn-close').addEventListener('click', closeViewer);
+  document.getElementById('btn-next').addEventListener('click', () => navViewer(1));
+  document.getElementById('btn-prev').addEventListener('click', () => navViewer(-1));
+  viewer.addEventListener('click', (e) => {
+    if (e.target === viewer) closeViewer();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!viewer.classList.contains('active')) return;
+    if (e.key === 'Escape') closeViewer();
+    if (e.key === 'ArrowRight') navViewer(1);
+    if (e.key === 'ArrowLeft') navViewer(-1);
+  });
+}
+
+function resize() {
+  width = window.innerWidth;
+  height = window.innerHeight;
+  // Calculate tile width based on desired aspect ratio and row height
+  // Or fixed columns? Let's use rowHeight as the anchor for consistency
+  tileWidth = CONFIG.rowHeight * CONFIG.tileAspect;
+}
+
+function onResize() {
+  resize();
+  // Re-create grid if dimensions change drastically? 
+  // For simplicity in this lightweight version, we just update bounds.
+  // Ideally we'd rebuild the grid pool if screen gets much larger.
+  // A simple reload is safer for big resizes to ensure coverage.
+  if (Math.abs(width - window.innerWidth) > 100) {
+    location.reload(); 
+  }
+}
+
+/**
+ * Creates the pool of DOM elements needed to cover the screen
+ */
+function createGrid() {
+  container.innerHTML = '';
+  tiles = [];
+  
+  // How many cols/rows to cover screen + buffer
+  // We add 2 extra on each side for smooth wrapping
+  const colsNeeded = Math.ceil(width / (tileWidth + CONFIG.gap)) + 2;
+  const rowsNeeded = Math.ceil(height / (CONFIG.rowHeight + CONFIG.gap)) + 2;
+  
+  gridCols = colsNeeded;
+  gridRows = rowsNeeded;
+  
+  const totalTiles = gridCols * gridRows;
+  
+  for (let i = 0; i < totalTiles; i++) {
+    const el = document.createElement('div');
+    el.className = 'tile';
+    el.style.width = `${tileWidth}px`;
+    el.style.height = `${CONFIG.rowHeight}px`;
+    
+    const inner = document.createElement('div');
+    inner.className = 'tile-inner';
+    el.appendChild(inner);
+    
+    container.appendChild(el);
+    
+    // Store metadata
+    tiles.push({
+      el,
+      inner,
+      col: i % gridCols,
+      row: Math.floor(i / gridCols),
+      currentMediaIndex: -1, // Force update first frame
+      x: 0,
+      y: 0
+    });
+  }
+}
+
+/**
+ * The Main Animation Loop
+ */
+function loop() {
+  rafId = requestAnimationFrame(loop);
+  
+  // 1. Physics
+  if (!isDragging) {
+    // Apply Friction
+    velocity.x *= CONFIG.friction;
+    velocity.y *= CONFIG.friction;
+    
+    // Float effect (if slow enough)
+    if (CONFIG.idleFloat && Math.abs(velocity.x) < 0.1 && Math.abs(velocity.y) < 0.1) {
+      time += 0.01;
+      velocity.x += Math.sin(time) * 0.02;
+      velocity.y += Math.cos(time * 0.7) * 0.02;
+    }
+  }
+  
+  // Update Offset
+  offset.x += velocity.x * CONFIG.speed;
+  offset.y += velocity.y * CONFIG.speed;
+  
+  // 2. Rendering / Virtual Grid Logic
+  const totalGridW = gridCols * (tileWidth + CONFIG.gap);
+  const totalGridH = gridRows * (CONFIG.rowHeight + CONFIG.gap);
+  
+  tiles.forEach(tile => {
+    // Calculate "base" position in the grid
+    let baseX = tile.col * (tileWidth + CONFIG.gap);
+    let baseY = tile.row * (CONFIG.rowHeight + CONFIG.gap);
+    
+    // Apply global offset
+    let x = baseX + offset.x;
+    let y = baseY + offset.y;
+    
+    // Parallax: Shift Y based on column to create "uneven" drift
+    // We use tile.col to offset the Y
+    let paraY = (tile.col % 2 === 0 ? 1 : -1) * (offset.x * CONFIG.parallaxStrength);
+    y += paraY;
+
+    // WRAPPING LOGIC (The "Infinite" part)
+    // If tile moves too far left/up, transport to right/down
+    // If tile moves too far right/down, transport to left/up
+    
+    // Wrap X
+    // We want x to be roughly within [-width, width]
+    // Use modulo to wrap relative to camera
+    // Offset the check by width/2 to center the wrapping
+    
+    // The visual loop length
+    const loopW = totalGridW;
+    const loopH = totalGridH;
+    
+    // Math to wrap `x` into range [-buffer, loopW - buffer]
+    // A robust way:
+    let wrappedX = ((x % loopW) + loopW) % loopW;
+    // Shift so 0 is not the hard edge, center it
+    if (wrappedX > width + tileWidth) wrappedX -= loopW;
+    if (wrappedX < -tileWidth * 2) wrappedX += loopW;
+    
+    let wrappedY = ((y % loopH) + loopH) % loopH;
+    if (wrappedY > height + CONFIG.rowHeight) wrappedY -= loopH;
+    if (wrappedY < -CONFIG.rowHeight * 2) wrappedY += loopH;
+
+    // 3. Content Mapping (Intelligent Shuffle)
+    // We need to know the "Virtual" column/row index to assign consistent content
+    // Determine how many times we've wrapped
+    const wrapCol = Math.round((x - wrappedX) / loopW); 
+    const wrapRow = Math.round((y - wrappedY) / loopH);
+    
+    // Logical coordinates in the infinite space
+    const logicalCol = tile.col - (wrapCol * gridCols);
+    const logicalRow = tile.row - (wrapRow * gridRows);
+    
+    // Generate a pseudo-random index based on position so it looks shuffled but consistent
+    // Using primes avoids obvious repeating diagonal patterns
+    const patternIndex = Math.abs((logicalCol * 7) + (logicalRow * 11));
+    const mediaIndex = patternIndex % MEDIA.length;
+    
+    // DOM Update: only if content changed (performance)
+    if (tile.currentMediaIndex !== mediaIndex) {
+      updateTileContent(tile, MEDIA[mediaIndex]);
+      tile.currentMediaIndex = mediaIndex;
+    }
+    
+    // Apply Transform
+    tile.el.style.transform = `translate3d(${wrappedX.toFixed(1)}px, ${wrappedY.toFixed(1)}px, 0)`;
+  });
+}
+
+function updateTileContent(tile, item) {
+  tile.inner.innerHTML = ''; // Clear old
+  
+  let mediaEl;
+  if (item.type === 'video') {
+    mediaEl = document.createElement('video');
+    mediaEl.src = item.src;
+    mediaEl.muted = true;
+    mediaEl.loop = true;
+    mediaEl.playsInline = true;
+    // Auto play videos on hover is handled via JS mouseenter if desired, 
+    // or just autoplay:
+    // mediaEl.autoplay = true; 
+    // Ideally only play when visible/hovered for performance
+    mediaEl.onmouseover = () => mediaEl.play();
+    mediaEl.onmouseout = () => mediaEl.pause();
+  } else {
+    mediaEl = document.createElement('img');
+    mediaEl.src = item.src;
+    // Removed alt title usage to ensure no names appear
+    mediaEl.alt = "Gallery image"; 
+    mediaEl.draggable = false;
+  }
+  
+  tile.inner.appendChild(mediaEl);
+  
+  // Attach data for click handler
+  tile.el.dataset.index = MEDIA.indexOf(item);
+  tile.el.onpointerdown = function(e) {
+      // Press animation
+      this.style.transform = this.style.transform.replace(/scale\([0-9.]+\)/, '') + ` scale(${CONFIG.pressScale})`;
+      
+      if (CONFIG.rippleOn) {
+        const rect = this.getBoundingClientRect();
+        const ripple = document.createElement('div');
+        ripple.className = 'ripple';
+        ripple.style.left = `${e.clientX - rect.left}px`;
+        ripple.style.top = `${e.clientY - rect.top}px`;
+        this.appendChild(ripple);
+        setTimeout(() => ripple.remove(), 600);
+      }
+  };
+  tile.el.onpointerup = function() {
+      // Restore scale handled by loop re-applying transform, 
+      // but let's reset transition manually for smoothness
+      setTimeout(() => {
+         // The loop overwrites transform every frame, so we rely on the loop 
+         // to remove the scale on next frame naturally.
+      }, 150);
+  };
+}
+
+
+/**
+ * ============================================================================
+ * INPUT HANDLING
+ * ============================================================================
+ */
+
+function onPointerDown(e) {
+  isDragging = true;
+  lastMouse = { x: e.clientX, y: e.clientY };
+  dragStart = { x: e.clientX, y: e.clientY };
+  velocity = { x: 0, y: 0 }; // Stop drift on grab
+  container.setPointerCapture(e.pointerId);
+}
+
+function onPointerMove(e) {
+  if (!isDragging) return;
+  
+  const dx = e.clientX - lastMouse.x;
+  const dy = e.clientY - lastMouse.y;
+  
+  // Direct movement
+  offset.x += dx * CONFIG.speed;
+  offset.y += dy * CONFIG.speed;
+  
+  // Calculate velocity for inertia release
+  velocity.x = dx;
+  velocity.y = dy;
+  
+  // Clamp velocity
+  velocity.x = Math.max(Math.min(velocity.x, CONFIG.maxVelocity), -CONFIG.maxVelocity);
+  velocity.y = Math.max(Math.min(velocity.y, CONFIG.maxVelocity), -CONFIG.maxVelocity);
+  
+  lastMouse = { x: e.clientX, y: e.clientY };
+}
+
+function onPointerUp(e) {
+  if (!isDragging) return;
+  isDragging = false;
+  
+  // Detect Click vs Drag
+  const dist = Math.hypot(e.clientX - dragStart.x, e.clientY - dragStart.y);
+  
+  if (dist < CONFIG.clickThreshold) {
+    // It was a click!
+    // Find target tile
+    const tileEl = e.target.closest('.tile');
+    if (tileEl && tileEl.dataset.index) {
+      openViewer(parseInt(tileEl.dataset.index));
+    }
+  }
+}
+
+/**
+ * ============================================================================
+ * VIEWER LOGIC
+ * ============================================================================
+ */
+
+let currentViewerIndex = 0;
+
+function openViewer(index) {
+  currentViewerIndex = index;
+  updateViewer();
+  viewer.classList.add('active');
+  // Pause main loop physics for performance? Optional.
+  // cancelAnimationFrame(rafId);
+}
+
+function closeViewer() {
+  viewer.classList.remove('active');
+  viewerContent.innerHTML = ''; // Stop videos
+  // loop();
+}
+
+function navViewer(dir) {
+  currentViewerIndex = (currentViewerIndex + dir + MEDIA.length) % MEDIA.length;
+  updateViewer();
+}
+
+function updateViewer() {
+  const item = MEDIA[currentViewerIndex];
+  viewerContent.innerHTML = '';
+  // Removed caption setting
+  
+  if (item.type === 'video') {
+    const v = document.createElement('video');
+    v.src = item.src;
+    v.id = 'viewer-media';
+    v.controls = true;
+    v.autoplay = true;
+    viewerContent.appendChild(v);
+  } else {
+    const img = document.createElement('img');
+    img.src = item.src;
+    img.id = 'viewer-media';
+    viewerContent.appendChild(img);
+  }
+}
+
+// Start
+init();
+
+</script>
+</body>
+</html>

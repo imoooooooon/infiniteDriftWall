@@ -178,22 +178,7 @@
     max-width: 90vw; /* Safety constraint */
   }
 
-  /* The Blurred Gradient Background */
-  .uiverse-glow {
-    position: absolute;
-    inset: 0;
-    transition: all 1s ease;
-    opacity: 0.6;
-    /* Indigo-500, Pink-500, Yellow-400 */
-    background: linear-gradient(to right, #6366f1, #ec4899, #facc15);
-    border-radius: 0.75rem; /* rounded-xl */
-    filter: blur(16px); /* blur-lg */
-  }
-
-  .uiverse-wrapper:hover .uiverse-glow {
-    opacity: 1;
-    transition-duration: 0.2s;
-  }
+  /* REMOVED: .uiverse-glow styles */
 
   /* The Button Itself - Updated to Apple Liquid Glass */
   .uiverse-btn {
@@ -806,11 +791,6 @@ function updateViewer() {
   // Wrapper for positioning
   const wrapper = document.createElement('div');
   wrapper.className = 'uiverse-wrapper';
-  
-  // The background blur element
-  const blurBg = document.createElement('div');
-  blurBg.className = 'uiverse-glow';
-  wrapper.appendChild(blurBg);
   
   // The Button itself
   const cta = document.createElement('a');

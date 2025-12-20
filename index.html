@@ -4,10 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Infinite Drift Wall</title>
-<!-- Added Plus Jakarta Sans Font -->
+<!-- Added Plus Jakarta Sans Font (Includes Light 300) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
 
 <style>
   /* --- CSS RESET & BASE --- */
@@ -154,7 +154,7 @@
     user-select: auto;
   }
 
-  /* --- UIVERSE BUTTON STYLES --- */
+  /* --- BUTTON STYLES (Elegant & Animated) --- */
   
   .uiverse-wrapper {
     position: absolute;
@@ -167,7 +167,6 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 1rem;
     
     /* Entry Animation */
     opacity: 0;
@@ -175,73 +174,147 @@
     
     /* Ensure no wrapping on wrapper level */
     white-space: nowrap;
-    max-width: 90vw; /* Safety constraint */
+    max-width: 90vw; 
   }
 
-  /* REMOVED: .uiverse-glow styles */
-
-  /* The Button Itself - Updated to Apple Liquid Glass */
-  .uiverse-btn {
+  /* New Button Style */
+  .boton-elegante {
+    padding: 15px 30px;
+    border: 2px solid #2c2c2c;
+    background-color: #1a1a1a;
+    color: #ffffff;
+    font-size: 1.1rem;
+    cursor: pointer;
+    border-radius: 12px; /* Slight radius per request */
+    transition: all 0.4s ease;
+    outline: none;
     position: relative;
-    display: inline-flex;
-    align-items: center;
+    overflow: hidden;
+    font-weight: 400; /* Regular Font Weight */
+    display: flex;
     justify-content: center;
-    
-    /* Font */
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-size: 1rem;
-    font-weight: 600;
-    color: white;
+    align-items: center;
+    gap: 24px; /* Increased gap to 24px */
     text-decoration: none;
-    white-space: nowrap; /* Forces single line */
-    
-    /* Styles - Apple Liquid Glass Effect */
-    background: rgba(30, 30, 30, 0.65); /* Semi-transparent dark base */
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    padding: 0.75rem 2rem; /* px-8 py-3 */
-    border-radius: 0.75rem; /* rounded-xl */
-    border: 1px solid rgba(255, 255, 255, 0.2); /* Crisp glass border */
-    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-    
-    transition: all 0.2s ease;
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  .uiverse-btn:hover {
-    background: rgba(45, 45, 45, 0.75); /* Slightly lighter on hover */
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); 
-    transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.35);
+  .boton-elegante::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0) 70%
+    );
+    transform: scale(0);
+    transition: transform 0.5s ease;
+    z-index: 0; /* Behind Text */
   }
 
-  /* The SVG Icon */
+  .boton-elegante:hover::after {
+    transform: scale(4);
+  }
+
+  .boton-elegante:hover {
+    border-color: #666666;
+    background: #292929;
+  }
+  
+  /* Text Container - Wraps the animated text layers */
+  .text-wrapper {
+    position: relative;
+    display: flex;
+    overflow: hidden;
+    z-index: 1; /* Above gradient */
+    line-height: 1.2; /* Tighter line height to prevent artifacts */
+    padding-bottom: 1px; /* Slight padding to catch descenders */
+  }
+
+  /* Text Animation Logic */
+  .span-mother, .span-mother2 {
+    display: flex;
+    pointer-events: none;
+  }
+  
+  .span-mother2 {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* INCREASED TRANSLATION TO 1.5em TO FIX BLEED */
+  .boton-elegante:hover .span-mother span {
+    transform: translateY(1.5em); 
+  }
+
+  .boton-elegante:hover .span-mother2 span {
+    transform: translateY(0);
+  }
+
+  .span-mother span, .span-mother2 span {
+    display: inline-block;
+    transition: 0.2s;
+  }
+  
+  /* Start position higher up */
+  .span-mother2 span {
+    transform: translateY(-1.5em);
+  }
+
+  /* Extended Transition Staggering */
+  .boton-elegante span:nth-child(1) { transition: 0.2s; }
+  .boton-elegante span:nth-child(2) { transition: 0.25s; }
+  .boton-elegante span:nth-child(3) { transition: 0.3s; }
+  .boton-elegante span:nth-child(4) { transition: 0.35s; }
+  .boton-elegante span:nth-child(5) { transition: 0.4s; }
+  .boton-elegante span:nth-child(6) { transition: 0.45s; }
+  .boton-elegante span:nth-child(7) { transition: 0.5s; }
+  .boton-elegante span:nth-child(8) { transition: 0.55s; }
+  .boton-elegante span:nth-child(9) { transition: 0.6s; }
+  .boton-elegante span:nth-child(10) { transition: 0.65s; }
+  .boton-elegante span:nth-child(11) { transition: 0.7s; }
+  .boton-elegante span:nth-child(12) { transition: 0.75s; }
+  .boton-elegante span:nth-child(13) { transition: 0.8s; }
+  .boton-elegante span:nth-child(14) { transition: 0.85s; }
+  .boton-elegante span:nth-child(15) { transition: 0.9s; }
+  .boton-elegante span:nth-child(16) { transition: 0.95s; }
+  .boton-elegante span:nth-child(17) { transition: 1.0s; }
+
+  /* Arrow Icon Styles from Snippet */
   .uiverse-icon {
-    margin-top: 0.125rem;
-    margin-left: 0.5rem;
-    margin-right: -0.25rem;
-    stroke: white;
-    stroke-width: 2;
     width: 10px;
     height: 10px;
+    stroke: white;
+    stroke-width: 2;
     fill: none;
-    flex-shrink: 0; /* Prevent icon from shrinking */
+    z-index: 1;
+    margin-top: 2px; /* Alignment tweak */
   }
-
-  /* Animation for the arrow parts */
+  
   .arrow-line {
     opacity: 0;
     transition: opacity 0.2s ease;
   }
+  
   .arrow-head {
     transition: transform 0.2s ease;
   }
-
-  .uiverse-wrapper:hover .arrow-line {
+  
+  .boton-elegante:hover .arrow-line {
     opacity: 1;
   }
-  .uiverse-wrapper:hover .arrow-head {
+  
+  .boton-elegante:hover .arrow-head {
     transform: translateX(3px);
   }
+
 
   @keyframes fadeInUp { 
     from { opacity: 0; transform: translate(-50%, 30px); } 
@@ -290,9 +363,9 @@
     #viewer-content { max-width: 95%; }
 
     /* Adjust Button for Mobile to prevent wrapping */
-    .uiverse-btn {
-        padding: 0.75rem 1.2rem; /* Reduced horizontal padding */
-        font-size: 0.95rem;      /* Slightly smaller text if needed */
+    .boton-elegante {
+        padding: 12px 20px; 
+        font-size: 1rem;
         max-width: 100%;
     }
   }
@@ -784,9 +857,10 @@ function updateViewer() {
     viewerContent.appendChild(img);
   }
 
-  // 2. CTA Button (Uiverse Style)
+  // 2. CTA Button (New Elegant Animation Style)
   // Use the item.link if available, otherwise fallback
   const linkUrl = item.link || "https://www.facebook.com/";
+  const ctaText = "See Original Post";
   
   // Wrapper for positioning
   const wrapper = document.createElement('div');
@@ -796,27 +870,59 @@ function updateViewer() {
   const cta = document.createElement('a');
   cta.href = linkUrl;
   cta.target = "_blank";
-  cta.className = 'uiverse-btn';
+  cta.className = 'boton-elegante';
   cta.setAttribute('role', 'button');
+
+  // Create wrapper for text to ensure alignment with icon
+  const textWrapper = document.createElement('div');
+  textWrapper.className = 'text-wrapper';
   
-  // Text
-  cta.appendChild(document.createTextNode("See Original Post"));
+  // Create Span Mothers for text animation
+  const spanMother1 = document.createElement('div');
+  spanMother1.className = 'span-mother';
   
-  // SVG Icon
+  const spanMother2 = document.createElement('div');
+  spanMother2.className = 'span-mother2';
+  
+  // Split text into spans, handling spaces
+  const chars = ctaText.split('');
+  
+  chars.forEach(char => {
+      const s1 = document.createElement('span');
+      const s2 = document.createElement('span');
+      
+      // Preserve spaces
+      if (char === ' ') {
+          s1.innerHTML = '&nbsp;';
+          s2.innerHTML = '&nbsp;';
+      } else {
+          s1.textContent = char;
+          s2.textContent = char;
+      }
+      
+      spanMother1.appendChild(s1);
+      spanMother2.appendChild(s2);
+  });
+  
+  textWrapper.appendChild(spanMother1);
+  textWrapper.appendChild(spanMother2);
+  cta.appendChild(textWrapper);
+
+  // SVG Icon (Arrow) - appended after text wrapper
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('viewBox', '0 0 10 10');
   svg.setAttribute('class', 'uiverse-icon');
   
-  // Path 1 (Line)
+  // Path 1 (Line) - initially hidden
   const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path1.setAttribute('d', 'M0 5h7');
-  path1.setAttribute('class', 'arrow-line');
+  path1.setAttribute('class', 'arrow-line'); // This class controls opacity
   
-  // Path 2 (Arrow head)
+  // Path 2 (Head) - slides right
   const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path2.setAttribute('d', 'M1 1l4 4-4 4');
-  path2.setAttribute('class', 'arrow-head');
+  path2.setAttribute('d', 'M1 1l4 4-4 4'); 
+  path2.setAttribute('class', 'arrow-head'); // This class controls translation
   
   svg.appendChild(path1);
   svg.appendChild(path2);
@@ -836,4 +942,3 @@ init();
 </script>
 </body>
 </html>
-

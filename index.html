@@ -172,6 +172,10 @@
     /* Entry Animation */
     opacity: 0;
     animation: fadeInUp 0.6s ease 0.2s forwards;
+    
+    /* Ensure no wrapping on wrapper level */
+    white-space: nowrap;
+    max-width: 90vw; /* Safety constraint */
   }
 
   /* The Blurred Gradient Background */
@@ -191,7 +195,7 @@
     transition-duration: 0.2s;
   }
 
-  /* The Button Itself */
+  /* The Button Itself - Updated to Apple Liquid Glass */
   .uiverse-btn {
     position: relative;
     display: inline-flex;
@@ -204,21 +208,25 @@
     font-weight: 600;
     color: white;
     text-decoration: none;
+    white-space: nowrap; /* Forces single line */
     
-    /* Styles */
-    background-color: #111827; /* gray-900 */
+    /* Styles - Apple Liquid Glass Effect */
+    background: rgba(30, 30, 30, 0.65); /* Semi-transparent dark base */
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
     padding: 0.75rem 2rem; /* px-8 py-3 */
     border-radius: 0.75rem; /* rounded-xl */
-    border: 1px solid rgba(255, 255, 255, 0.1); /* Added subtle border */
+    border: 1px solid rgba(255, 255, 255, 0.2); /* Crisp glass border */
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
     
     transition: all 0.2s ease;
   }
 
   .uiverse-btn:hover {
-    background-color: #1f2937; /* gray-800 */
-    box-shadow: 0 10px 15px -3px rgba(75, 85, 99, 0.3); /* shadow-lg + shadow-gray */
+    background: rgba(45, 45, 45, 0.75); /* Slightly lighter on hover */
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2); 
     transform: translateY(-2px);
-    border-color: rgba(255, 255, 255, 0.2); /* Slightly brighter border on hover */
+    border-color: rgba(255, 255, 255, 0.35);
   }
 
   /* The SVG Icon */
@@ -231,6 +239,7 @@
     width: 10px;
     height: 10px;
     fill: none;
+    flex-shrink: 0; /* Prevent icon from shrinking */
   }
 
   /* Animation for the arrow parts */
@@ -294,6 +303,13 @@
     .viewer-btn { width: 40px; height: 40px; }
     #btn-prev, #btn-next { display: none; /* Swipe only on mobile usually, but kept simple */ }
     #viewer-content { max-width: 95%; }
+
+    /* Adjust Button for Mobile to prevent wrapping */
+    .uiverse-btn {
+        padding: 0.75rem 1.2rem; /* Reduced horizontal padding */
+        font-size: 0.95rem;      /* Slightly smaller text if needed */
+        max-width: 100%;
+    }
   }
 </style>
 </head>
@@ -562,6 +578,7 @@ function loop() {
     // 2. Calculate Coordinates
     
     // X-Axis: Standard Panning
+    // All tiles move together horizontally (reverted row-splitting logic)
     let x = baseX + offset.x;
 
     // Y-Axis: Split Panning
@@ -576,6 +593,7 @@ function loop() {
     const loopH = totalGridH;
    
     // Math to wrap `x` into range [-buffer, loopW - buffer]
+    // The ((n % m) + m) % m formula handles negative numbers correctly
     let wrappedX = ((x % loopW) + loopW) % loopW;
    
     // Shift so 0 is not the hard edge, center it
@@ -587,6 +605,8 @@ function loop() {
     if (wrappedY < -CONFIG.rowHeight * 2) wrappedY += loopH;
 
     // 4. Content Mapping (Intelligent Shuffle)
+    // We need to know the "Virtual" column/row index to assign consistent content
+    // Determine how many times we've wrapped
     const wrapCol = Math.round((x - wrappedX) / loopW);
     const wrapRow = Math.round((y - wrappedY) / loopH);
    
@@ -836,6 +856,3 @@ init();
 </script>
 </body>
 </html>
-
-
-

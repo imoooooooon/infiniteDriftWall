@@ -154,7 +154,7 @@
     user-select: auto;
   }
 
-  /* --- BUTTON STYLES (Elegant & Animated) --- */
+  /* --- BUTTON STYLES (Elegant Dark) --- */
   
   .uiverse-wrapper {
     position: absolute;
@@ -167,6 +167,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 16px; /* Gap between the two buttons */
     
     /* Entry Animation */
     opacity: 0;
@@ -174,32 +175,29 @@
     
     /* Ensure no wrapping on wrapper level */
     white-space: nowrap;
-    max-width: 90vw; 
+    max-width: 95vw; 
   }
 
-  /* New Button Style */
-  .boton-elegante {
-    padding: 15px 30px;
-    border: 2px solid #2c2c2c;
+  /* --- SHARED STYLES FOR BOTH BUTTONS --- */
+  .boton-elegante, .boton-circular {
+    /* Dark Base Styles */
     background-color: #1a1a1a;
+    border: 2px solid #2c2c2c;
     color: #ffffff;
-    font-size: 1.1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     cursor: pointer;
-    border-radius: 12px; /* Slight radius per request */
     transition: all 0.4s ease;
     outline: none;
     position: relative;
     overflow: hidden;
-    font-weight: 400; /* Regular Font Weight */
+    text-decoration: none;
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: 24px; /* Increased gap to 24px */
-    text-decoration: none;
-    font-family: 'Plus Jakarta Sans', sans-serif;
   }
 
-  .boton-elegante::after {
+  /* Radial Gradient Hover Effect (Shared) */
+  .boton-elegante::after, .boton-circular::after {
     content: "";
     position: absolute;
     top: 0;
@@ -208,21 +206,34 @@
     height: 100%;
     background: radial-gradient(
       circle,
-      rgba(255, 255, 255, 0.25) 0%,
+      rgba(255, 255, 255, 0.15) 0%,
       rgba(255, 255, 255, 0) 70%
     );
     transform: scale(0);
     transition: transform 0.5s ease;
-    z-index: 0; /* Behind Text */
+    z-index: 0;
+    pointer-events: none;
   }
 
-  .boton-elegante:hover::after {
+  .boton-elegante:hover::after, .boton-circular:hover::after {
     transform: scale(4);
   }
 
-  .boton-elegante:hover {
+  .boton-elegante:hover, .boton-circular:hover {
     border-color: #666666;
     background: #292929;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.4);
+  }
+
+  /* --- MAIN CTA BUTTON SPECIFICS --- */
+  .boton-elegante {
+    padding: 12px 24px;
+    font-size: 0.95rem; 
+    border-radius: 12px;
+    font-weight: 400;
+    gap: 12px; 
+    font-family: 'Plus Jakarta Sans', sans-serif;
   }
   
   /* Text Container - Wraps the animated text layers */
@@ -230,9 +241,9 @@
     position: relative;
     display: flex;
     overflow: hidden;
-    z-index: 1; /* Above gradient */
-    line-height: 1.2; /* Tighter line height to prevent artifacts */
-    padding-bottom: 1px; /* Slight padding to catch descenders */
+    z-index: 2; /* Above gradient */
+    line-height: 1.2; 
+    padding-bottom: 1px; 
   }
 
   /* Text Animation Logic */
@@ -287,15 +298,15 @@
   .boton-elegante span:nth-child(16) { transition: 0.95s; }
   .boton-elegante span:nth-child(17) { transition: 1.0s; }
 
-  /* Arrow Icon Styles from Snippet */
+  /* Arrow Icon Styles */
   .uiverse-icon {
     width: 10px;
     height: 10px;
     stroke: white;
     stroke-width: 2;
     fill: none;
-    z-index: 1;
-    margin-top: 2px; /* Alignment tweak */
+    z-index: 2; /* Above gradient */
+    margin-top: 0; 
   }
   
   .arrow-line {
@@ -313,6 +324,32 @@
   
   .boton-elegante:hover .arrow-head {
     transform: translateX(3px);
+  }
+
+  /* --- CIRCULAR BUTTON SPECIFICS --- */
+  .boton-circular {
+    width: 48px; /* Approx height of main button */
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    /* Behance Blue Background */
+    background-color: #1769FF;
+    border-color: #1769FF;
+    
+    /* Text Styles for "Bē" */
+    color: white;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 700; /* Bold */
+    font-size: 1.3rem; /* Adjusted for better proportion */
+    line-height: 1;
+  }
+
+  /* Specific Hover for Behance Button */
+  .boton-circular:hover {
+    background-color: #0057ff; /* Darker blue on hover */
+    border-color: #0057ff;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 16px rgba(23, 105, 255, 0.4); /* Blue-ish shadow */
   }
 
 
@@ -362,11 +399,14 @@
     #btn-prev, #btn-next { display: none; /* Swipe only on mobile usually, but kept simple */ }
     #viewer-content { max-width: 95%; }
 
-    /* Adjust Button for Mobile to prevent wrapping */
+    /* Adjust Buttons for Mobile */
     .boton-elegante {
-        padding: 12px 20px; 
-        font-size: 1rem;
-        max-width: 100%;
+        padding: 10px 20px; 
+        font-size: 0.9rem;
+    }
+    .boton-circular {
+        width: 44px;
+        height: 44px;
     }
   }
 </style>
@@ -857,41 +897,32 @@ function updateViewer() {
     viewerContent.appendChild(img);
   }
 
-  // 2. CTA Button (New Elegant Animation Style)
-  // Use the item.link if available, otherwise fallback
-  const linkUrl = item.link || "https://www.facebook.com/";
-  const ctaText = "See Original Post";
-  
-  // Wrapper for positioning
+  // --- BUTTON CONTAINER ---
   const wrapper = document.createElement('div');
   wrapper.className = 'uiverse-wrapper';
+
+  // --- BUTTON 1: CTA (Original Post) ---
+  const linkUrl = item.link || "https://www.facebook.com/";
+  const ctaText = "Original Post";
   
-  // The Button itself
   const cta = document.createElement('a');
   cta.href = linkUrl;
   cta.target = "_blank";
   cta.className = 'boton-elegante';
   cta.setAttribute('role', 'button');
 
-  // Create wrapper for text to ensure alignment with icon
+  // Text Animation Wrapper
   const textWrapper = document.createElement('div');
   textWrapper.className = 'text-wrapper';
-  
-  // Create Span Mothers for text animation
   const spanMother1 = document.createElement('div');
   spanMother1.className = 'span-mother';
-  
   const spanMother2 = document.createElement('div');
   spanMother2.className = 'span-mother2';
   
-  // Split text into spans, handling spaces
   const chars = ctaText.split('');
-  
   chars.forEach(char => {
       const s1 = document.createElement('span');
       const s2 = document.createElement('span');
-      
-      // Preserve spaces
       if (char === ' ') {
           s1.innerHTML = '&nbsp;';
           s2.innerHTML = '&nbsp;';
@@ -899,39 +930,47 @@ function updateViewer() {
           s1.textContent = char;
           s2.textContent = char;
       }
-      
       spanMother1.appendChild(s1);
       spanMother2.appendChild(s2);
   });
-  
   textWrapper.appendChild(spanMother1);
   textWrapper.appendChild(spanMother2);
   cta.appendChild(textWrapper);
 
-  // SVG Icon (Arrow) - appended after text wrapper
+  // CTA Arrow Icon
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute('aria-hidden', 'true');
   svg.setAttribute('viewBox', '0 0 10 10');
   svg.setAttribute('class', 'uiverse-icon');
   
-  // Path 1 (Line) - initially hidden
   const path1 = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path1.setAttribute('d', 'M0 5h7');
-  path1.setAttribute('class', 'arrow-line'); // This class controls opacity
+  path1.setAttribute('class', 'arrow-line'); 
   
-  // Path 2 (Head) - slides right
   const path2 = document.createElementNS("http://www.w3.org/2000/svg", "path");
   path2.setAttribute('d', 'M1 1l4 4-4 4'); 
-  path2.setAttribute('class', 'arrow-head'); // This class controls translation
+  path2.setAttribute('class', 'arrow-head'); 
   
   svg.appendChild(path1);
   svg.appendChild(path2);
   cta.appendChild(svg);
   
-  wrapper.appendChild(cta);
+  // --- BUTTON 2: BEHANCE (Circular) ---
+  const behanceUrl = "https://www.behance.net/imoooooooon"; // Placeholder URL
   
-  // Prevent closing modal when clicking the button
-  cta.addEventListener('click', (e) => e.stopPropagation());
+  const behanceBtn = document.createElement('a');
+  behanceBtn.href = behanceUrl;
+  behanceBtn.target = "_blank";
+  behanceBtn.className = 'boton-circular';
+  behanceBtn.setAttribute('aria-label', 'View on Behance');
+  behanceBtn.textContent = "Bē";
+
+  // Append buttons to wrapper
+  wrapper.appendChild(cta);
+  wrapper.appendChild(behanceBtn);
+  
+  // Prevent closing modal when clicking wrapper or buttons
+  wrapper.addEventListener('click', (e) => e.stopPropagation());
   
   viewerContent.appendChild(wrapper);
 }
